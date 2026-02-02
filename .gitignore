@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Local configuration (contains identity cache)
+config/pdtk.config.json
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

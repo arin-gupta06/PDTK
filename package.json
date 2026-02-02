@@ -1,0 +1,22 @@
+{
+  "name": "pdtk",
+  "version": "1.0.0",
+  "description": "Personal Development ToolKit - A CLI tool for daily development workflows",
+  "main": "bin/pdtk.js",
+  "bin": {
+    "pdtk": "./bin/pdtk.js"
+  },
+  "scripts": {
+    "test": "node bin/pdtk.js"
+  },
+  "keywords": [
+    "cli",
+    "developer-tools",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
