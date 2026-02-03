@@ -52,14 +52,19 @@ pdtk help
 | Command | Description |
 |---------|-------------|
 | `pdtk` | Confirm PDTK exists and is active |
-| `pdtk verify` | Detect and display configured GitHub identity |
+| `pdtk verify` | Check GitHub and LinkedIn sync status |
 | `pdtk status` | Alias for `verify` |
+| `pdtk github sync` | Link GitHub via Personal Access Token |
+| `pdtk github details`| Show GitHub profile, repos, and activity |
+| `pdtk linkedin sync` | Link LinkedIn via OAuth flow |
+| `pdtk linkedin details`| Show LinkedIn profile and about section |
 | `pdtk help` | Show available commands |
 
 ### v1.0 (Upcoming)
 
 | Command | Description |
 |---------|-------------|
+| `pdtk linkedin post` | Post shared content to LinkedIn |
 | `pdtk push` | Push code to GitHub |
 | `pdtk deploy` | Deploy to configured platform |
 | `pdtk brainstorm` | Get a structured second opinion on an idea |
@@ -74,7 +79,9 @@ pdtk/
 │   └── pdtk.js          # CLI entry point
 ├── core/
 │   ├── config.js        # Configuration management
-│   └── identity.js      # GitHub identity detection
+│   ├── identity.js      # GitHub identity detection
+│   ├── github-api.js    # GitHub API interactions (NEW)
+│   └── linkedin.js      # LinkedIn OAuth & API (NEW)
 ├── config/
 │   └── pdtk.config.json # Local config (gitignored)
 ├── package.json

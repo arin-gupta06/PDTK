@@ -82,10 +82,77 @@ function getStoredIdentity() {
     return config.github || null;
 }
 
+/**
+ * Save GitHub Personal Access Token
+ * @param {string} token - GitHub PAT
+ */
+function saveGitHubToken(token) {
+    const config = loadConfig();
+    config.githubToken = token;
+    config.lastUpdated = new Date().toISOString();
+    saveConfig(config);
+}
+
+/**
+ * Get stored GitHub token
+ * @returns {string|null}
+ */
+function getGitHubToken() {
+    const config = loadConfig();
+    return config.githubToken || null;
+}
+
+/**
+ * Save LinkedIn identity to config
+ * @param {object} identity - LinkedIn profile object
+ */
+function saveLinkedInIdentity(identity) {
+    const config = loadConfig();
+    config.linkedin = identity;
+    config.lastUpdated = new Date().toISOString();
+    saveConfig(config);
+}
+
+/**
+ * Get stored LinkedIn identity
+ * @returns {object|null}
+ */
+function getStoredLinkedIn() {
+    const config = loadConfig();
+    return config.linkedin || null;
+}
+
+/**
+ * Save LinkedIn App Credentials
+ * @param {string} clientId 
+ * @param {string} clientSecret 
+ */
+function saveLinkedInCredentials(clientId, clientSecret) {
+    const config = loadConfig();
+    config.linkedinCreds = { clientId, clientSecret };
+    config.lastUpdated = new Date().toISOString();
+    saveConfig(config);
+}
+
+/**
+ * Get stored LinkedIn credentials
+ * @returns {object|null}
+ */
+function getLinkedInCredentials() {
+    const config = loadConfig();
+    return config.linkedinCreds || null;
+}
+
 module.exports = {
     loadConfig,
     saveConfig,
     saveIdentity,
     getStoredIdentity,
+    saveGitHubToken,
+    getGitHubToken,
+    saveLinkedInIdentity,
+    getStoredLinkedIn,
+    saveLinkedInCredentials,
+    getLinkedInCredentials,
     CONFIG_FILE
 };

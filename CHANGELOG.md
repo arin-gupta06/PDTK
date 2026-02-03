@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1] - 2026-02-04
+
+### Added
+- **GitHub API Integration** — Fetch repositories and profile details via Personal Access Token
+- **LinkedIn OAuth Sync** — Complete OAuth 2.0 flow to link LinkedIn identities
+- **LinkedIn Details** — Show LinkedIn profile information and user summary
+- **Enhanced Verification** — Unified `pdtk verify` command for multi-platform status
+
+---
+
 ## [0.1.0] - 2026-02-02
 
 ### Added
