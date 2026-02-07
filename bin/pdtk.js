@@ -6,6 +6,7 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const readline = require('readline');
 const identity = require('../core/identity');
 const config = require('../core/config');
@@ -72,7 +73,8 @@ ${colors.bright}COMMANDS${colors.reset}
   ${colors.yellow}github sync${colors.reset}            Link GitHub via Personal Access Token
   ${colors.yellow}github details${colors.reset}         Show GitHub profile, repos, and activity
   
-  ${colors.yellow}linkedin sync${colors.reset}          Link LinkedIn via OAuth (requires App ID/Secret)
+  ${colors.yellow}linkedin sync${colors.reset}          Link LinkedIn via OAuth flow
+  ${colors.yellow}linkedin capture${colors.reset}       Capture profile data from Chrome Extension
   ${colors.yellow}linkedin details${colors.reset}       Show LinkedIn profile and about section
   
   ${colors.yellow}help${colors.reset}                   Show this help message
@@ -92,7 +94,7 @@ async function verifySyncStatus() {
 ${colors.cyan}${colors.bright}PDTK Sync Verification${colors.reset}
 ${'─'.repeat(30)}`);
 
-  const storedIdentity = config.getStoredIdentity();
+  const storedIdentity = config.getStoredGitHubIdentity();
   const githubToken = config.getGitHubToken();
   const linkedinInfo = config.getStoredLinkedIn();
 
@@ -143,7 +145,7 @@ async function syncGitHub() {
 
     config.saveGitHubToken(token);
     // Also update identity info
-    await config.saveIdentity({
+    await config.saveGitHubIdentity({
       username: profile.login,
       email: profile.email || 'Not public',
       authMethod: 'Personal Access Token',
@@ -251,12 +253,19 @@ async function syncLinkedIn() {
     console.log(`${colors.green}Success!${colors.reset}`);
 
     const about = await prompt('Enter your LinkedIn "About" section summary (optional):');
+    const projectsRaw = await prompt('Enter your Projects (comma-separated, optional):');
+    const skillsRaw = await prompt('Enter your Skills (comma-separated, optional):');
+
+    const projects = projectsRaw ? projectsRaw.split(',').map(p => p.trim()) : [];
+    const skills = skillsRaw ? skillsRaw.split(',').map(s => s.trim()) : [];
 
     config.saveLinkedInIdentity({
       name: profile.name,
-      email: profile.email || 'aring1262@gmail.com',
+      email: profile.email || '',
       sub: profile.sub,
       about: about || '',
+      projects: projects,
+      skills: skills,
       accessToken: tokenData.access_token,
       expiry: Date.now() + (tokenData.expires_in * 1000),
       linkedAt: new Date().toISOString()
@@ -297,9 +306,127 @@ async function showLinkedInDetails() {
   if (info.about) {
     console.log(`  ${info.about}`);
   } else {
-    console.log(`  ${colors.dim}No description provided. Run sync again to add one.${colors.reset}`);
+    console.log(`  ${colors.dim}No description provided.${colors.reset}`);
+  }
+
+  console.log(`\n  ${colors.bright}Projects:${colors.reset}`);
+  if (info.projects && info.projects.length > 0) {
+    info.projects.forEach(project => {
+      console.log(`  ${colors.yellow}•${colors.reset} ${project.title || project}`);
+      if (project.description) console.log(`    ${colors.dim}${project.description}${colors.reset}`);
+    });
+  } else {
+    console.log(`  ${colors.dim}No projects listed.${colors.reset}`);
+  }
+
+  console.log(`\n  ${colors.bright}Skills:${colors.reset}`);
+  if (info.skills && info.skills.length > 0) {
+    console.log(`  ${info.skills.join(' • ')}`);
+  } else {
+    console.log(`  ${colors.dim}No skills listed.${colors.reset}`);
   }
   console.log();
+}
+
+/**
+ * LinkedIn Capture Command (Local Server)
+ */
+async function captureLinkedIn() {
+  const http = require('http');
+
+  console.log(`\n${colors.cyan}${colors.bright}LinkedIn Data Capture Mode${colors.reset}`);
+  console.log(`${colors.dim}Listening for data from the PDTK Chrome Extension...${colors.reset}\n`);
+
+  const server = http.createServer((req, res) => {
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
+      res.end();
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/pdtk/linkedin/sync') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const data = JSON.parse(body);
+          console.log(`${colors.green}✓ Data received from extension!${colors.reset}`);
+
+          const currentLinkedIn = config.getStoredLinkedIn() || {};
+          config.saveLinkedInIdentity({
+            ...currentLinkedIn,
+            name: data.name,
+            about: data.about,
+            projects: data.projects,
+            skills: data.skills,
+            linkedAt: data.synced_at
+          });
+
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({ status: 'success' }));
+
+          console.log(`\n${colors.green}✓ LinkedIn profile successfully updated.${colors.reset}`);
+          console.log(`  Name: ${data.name}`);
+          console.log(`  Sync completed at: ${new Date().toLocaleTimeString()}\n`);
+          console.log(`${colors.dim}Press Ctrl+C to stop the listener.${colors.reset}`);
+
+        } catch (error) {
+          console.error(`${colors.red}Error parsing capture data:${colors.reset}`, error.message);
+          res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ status: 'error', message: error.message }));
+        }
+      });
+    } else if (req.method === 'POST' && req.url === '/pdtk/editor/snapshot') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const logPath = path.join(__dirname, '..', 'config', 'editor-snapshots.log');
+
+          const entry = {
+            receivedAt: new Date().toISOString(),
+            filePath: data.filePath,
+            cursor: data.cursor,
+            contentLength: data.content ? data.content.length : 0
+          };
+
+          fs.appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf8');
+
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(JSON.stringify({ status: 'success' }));
+
+          console.log(`\n${colors.green}✓ Editor snapshot received.${colors.reset}`);
+          console.log(`  File: ${data.filePath}`);
+          console.log(`  Cursor: line ${data.cursor?.line ?? '?'} col ${data.cursor?.character ?? '?'}`);
+        } catch (error) {
+          console.error(`${colors.red}Error parsing editor snapshot:${colors.reset}`, error.message);
+          res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ status: 'error', message: error.message }));
+        }
+      });
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  });
+
+  server.listen(4000, () => {
+    console.log(`${colors.yellow}Listener active at http://localhost:4000${colors.reset}`);
+    console.log(`${colors.dim}1. Open your LinkedIn profile in Chrome.${colors.reset}`);
+    console.log(`${colors.dim}2. Click the 'Sync with PDTK' button (bottom-right).${colors.reset}`);
+  });
 }
 
 /**
@@ -331,9 +458,10 @@ async function main() {
 
     case 'linkedin':
       if (subCommand === 'sync') await syncLinkedIn();
+      else if (subCommand === 'capture') await captureLinkedIn();
       else if (subCommand === 'details') await showLinkedInDetails();
       else {
-        console.log(`\nUsage: ${colors.yellow}pdtk linkedin [sync|details]${colors.reset}`);
+        console.log(`\nUsage: ${colors.yellow}pdtk linkedin [sync|capture|details]${colors.reset}`);
       }
       break;
 

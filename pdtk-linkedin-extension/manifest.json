@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "PDTK LinkedIn Sync",
+    "version": "1.0",
+    "description": "Extract LinkedIn profile data (About, Projects, Skills) for PDTK",
+    "permissions": [
+        "activeTab"
+    ],
+    "icons": {
+        "16": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
+    },
+    "host_permissions": [
+        "https://www.linkedin.com/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.linkedin.com/in/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}

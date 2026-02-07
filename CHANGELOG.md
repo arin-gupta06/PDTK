@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Daily] - 2026-02-07
+
+### Done
+- Ran `pdtk linkedin capture`, confirmed Chrome extension payload posts successfully (sync toast + listener OK)
+- Synced LinkedIn profile details for Arin Gupta into local config (about, projects, skills)
+- Noted cleanup needed: captured projects include verbose/duplicate entries to prune later
+
+---
+
+## [Daily] - 2026-02-08
+
+### Added
+- VS Code snapshot link: on-demand command to send active editor content/cursor to PDTK via `/pdtk/editor/snapshot`
+- Ignore-glob handling with feedback for skipped files
+- Extension debug config (`.vscode/launch.json`) to run only the PDTK link during F5
+
+### Fixed
+- Removed redundant activation event warning for the VS Code link package
+
+---
+
 ## [0.1.1] - 2026-02-04
 
 ### Added

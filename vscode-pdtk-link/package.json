@@ -1,0 +1,53 @@
+{
+  "name": "pdtk-vscode-link",
+  "displayName": "PDTK VS Code Link",
+  "description": "Send active editor snapshots to PDTK on demand.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pdtk.sendSnapshot",
+        "title": "PDTK: Send Editor Snapshot"
+      }
+    ],
+    "configuration": {
+      "title": "PDTK Link",
+      "properties": {
+        "pdtkLink.ignoreGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/.vscode/**",
+            "**/.DS_Store",
+            "**/*.lock"
+          ],
+          "description": "Glob patterns to ignore when sending snapshots."
+        },
+        "pdtkLink.endpoint": {
+          "type": "string",
+          "default": "http://localhost:4000/pdtk/editor/snapshot",
+          "description": "Endpoint for PDTK editor snapshots."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "echo 'no lint'",
+    "test": "echo 'no tests'"
+  },
+  "dependencies": {
+    "minimatch": "^9.0.3"
+  }
+}

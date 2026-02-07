@@ -59,6 +59,31 @@ pdtk help
 | `pdtk linkedin sync` | Link LinkedIn via OAuth flow |
 | `pdtk linkedin details`| Show LinkedIn profile and about section |
 | `pdtk help` | Show available commands |
+| `pdtk linkedin capture` | Listen for and capture data from the Chrome Extension |
+| `pdtk linkedin capture` + VS Code | Also exposes a local `/pdtk/editor/snapshot` endpoint for the VS Code snapshot command |
+
+### 🧩 LinkedIn Sync Extension
+
+If the automatic sync fails due to bot detection, you can use the built-in Chrome Extension:
+
+1. **Load Extension**:
+   - Open Chrome and go to `chrome://extensions/`.
+   - Enable **Developer Mode** (top-right).
+   - Click **Load unpacked** and select the `pdtk-linkedin-extension` folder in this repository.
+2. **Sync Profile**:
+   - Run `pdtk linkedin capture` in your terminal.
+   - Open your LinkedIn profile in Chrome.
+   - Click the **"Sync with PDTK"** button at the bottom-right of the page.
+   - Your details (About, Projects, Skills) will be instantly sent to PDTK!
+
+### VS Code Snapshot (on-demand)
+
+Use this to send your active editor context to PDTK on command (respects ignore globs):
+
+1. Start the PDTK listener: `pdtk linkedin capture` (keeps the local server open).
+2. Open VS Code and run the dev extension in `vscode-pdtk-link/` (F5 using the provided `.vscode/launch.json`).
+3. In the Extension Host window, open a file and run **PDTK: Send Editor Snapshot** from the Command Palette.
+4. The snapshot POSTs to `http://localhost:4000/pdtk/editor/snapshot`; skip patterns can be configured via `pdtkLink.ignoreGlobs`.
 
 ### v1.0 (Upcoming)
 

@@ -40,6 +40,9 @@ function loadConfig() {
     return {
         version: '1.0.0',
         github: null,
+        githubToken: null,
+        linkedin: null,
+        linkedinCreds: null,
         lastUpdated: null
     };
 }
@@ -59,7 +62,7 @@ function saveConfig(config) {
  * Save GitHub identity to config
  * @param {object} identity - Identity object from identity module
  */
-async function saveIdentity(identity) {
+async function saveGitHubIdentity(identity) {
     const config = loadConfig();
 
     config.github = {
@@ -77,7 +80,7 @@ async function saveIdentity(identity) {
  * Get stored GitHub identity
  * @returns {object|null} - Stored identity or null
  */
-function getStoredIdentity() {
+function getStoredGitHubIdentity() {
     const config = loadConfig();
     return config.github || null;
 }
@@ -146,8 +149,8 @@ function getLinkedInCredentials() {
 module.exports = {
     loadConfig,
     saveConfig,
-    saveIdentity,
-    getStoredIdentity,
+    saveGitHubIdentity,
+    getStoredGitHubIdentity,
     saveGitHubToken,
     getGitHubToken,
     saveLinkedInIdentity,
