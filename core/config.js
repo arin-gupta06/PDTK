@@ -146,6 +146,32 @@ function getLinkedInCredentials() {
     return config.linkedinCreds || null;
 }
 
+/**
+ * Save Brainstorm configuration (Ollama)
+ * @param {string|null} apiKey - Unused for Ollama, kept for compat
+ * @param {string} model  - Ollama model name (e.g. 'llama3', 'mistral')
+ */
+function saveBrainstormConfig(apiKey, model) {
+    const config = loadConfig();
+    config.brainstorm = {
+        provider: 'ollama',
+        model: model || 'llama3',
+        endpoint: 'http://localhost:11434',
+        configuredAt: new Date().toISOString()
+    };
+    config.lastUpdated = new Date().toISOString();
+    saveConfig(config);
+}
+
+/**
+ * Get stored Brainstorm AI configuration
+ * @returns {object|null} - { apiKey, model } or null
+ */
+function getBrainstormConfig() {
+    const config = loadConfig();
+    return config.brainstorm || null;
+}
+
 module.exports = {
     loadConfig,
     saveConfig,
@@ -157,5 +183,7 @@ module.exports = {
     getStoredLinkedIn,
     saveLinkedInCredentials,
     getLinkedInCredentials,
+    saveBrainstormConfig,
+    getBrainstormConfig,
     CONFIG_FILE
 };

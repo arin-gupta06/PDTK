@@ -12,6 +12,7 @@ const identity = require('../core/identity');
 const config = require('../core/config');
 const githubApi = require('../core/github-api');
 const linkedin = require('../core/linkedin');
+const brainstorm = require('../core/brainstorm');
 
 const VERSION = '1.0.0';
 
@@ -76,6 +77,13 @@ ${colors.bright}COMMANDS${colors.reset}
   ${colors.yellow}linkedin sync${colors.reset}          Link LinkedIn via OAuth flow
   ${colors.yellow}linkedin capture${colors.reset}       Capture profile data from Chrome Extension
   ${colors.yellow}linkedin details${colors.reset}       Show LinkedIn profile and about section
+  
+  ${colors.yellow}brainstorm${colors.reset}             Start interactive brainstorm terminal
+  ${colors.yellow}brainstorm setup${colors.reset}       Configure AI API key for brainstorming
+  ${colors.yellow}brainstorm list${colors.reset}        List saved brainstorm sessions
+  ${colors.yellow}brainstorm load <id>${colors.reset}   Resume a saved brainstorm session
+  ${colors.yellow}brainstorm export <id>${colors.reset} Export a session to file
+  ${colors.yellow}brainstorm import <f>${colors.reset} Import a session from file
   
   ${colors.yellow}help${colors.reset}                   Show this help message
 
@@ -463,6 +471,15 @@ async function main() {
       else {
         console.log(`\nUsage: ${colors.yellow}pdtk linkedin [sync|capture|details]${colors.reset}`);
       }
+      break;
+
+    case 'brainstorm':
+      if (subCommand === 'setup') await brainstorm.setup();
+      else if (subCommand === 'list') brainstorm.listSessionsCLI();
+      else if (subCommand === 'load') await brainstorm.start(args[2]);
+      else if (subCommand === 'export') brainstorm.exportSessionCLI(args[2]);
+      else if (subCommand === 'import') brainstorm.importSessionCLI(args[2]);
+      else await brainstorm.start();
       break;
 
     case 'help':
