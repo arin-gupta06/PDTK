@@ -61,6 +61,12 @@ pdtk help
 | `pdtk help` | Show available commands |
 | `pdtk linkedin capture` | Listen for and capture data from the Chrome Extension |
 | `pdtk linkedin capture` + VS Code | Also exposes a local `/pdtk/editor/snapshot` endpoint for the VS Code snapshot command |
+| `pdtk brainstorm` | Launch interactive AI brainstorm terminal (Ollama) |
+| `pdtk brainstorm setup` | Configure Ollama model for brainstorming |
+| `pdtk brainstorm list` | List all saved brainstorm sessions |
+| `pdtk brainstorm load <id>` | Resume a saved brainstorm session |
+| `pdtk brainstorm export <id>` | Export a session to JSON file |
+| `pdtk brainstorm import <file>` | Import a session from JSON file |
 
 ### 🧩 LinkedIn Sync Extension
 
@@ -85,6 +91,35 @@ Use this to send your active editor context to PDTK on command (respects ignore 
 3. In the Extension Host window, open a file and run **PDTK: Send Editor Snapshot** from the Command Palette.
 4. The snapshot POSTs to `http://localhost:4000/pdtk/editor/snapshot`; skip patterns can be configured via `pdtkLink.ignoreGlobs`.
 
+### 🧠 Brainstorm Terminal
+
+A structured, AI-assisted ideation environment powered by **Ollama** (local LLM). Acts as a thinking partner, not a chatbot.
+
+```bash
+# First-time setup
+pdtk brainstorm setup     # Configure your Ollama model
+
+# Start brainstorming
+pdtk brainstorm            # Opens interactive terminal
+```
+
+**Inside the brainstorm terminal:**
+```
+pdtk > /brainstorm Real-time duel system    # AI generates structured analysis
+pdtk > /option 2                             # Explore the alternative path
+pdtk > /expand architecture                  # Deep-dive a section
+pdtk > /compare                              # Side-by-side option analysis
+pdtk > /report                               # Generate session report
+```
+
+**Key features:**
+- **Second Option Logic** — Every brainstorm generates two distinct paths to prevent tunnel vision
+- **Anti-Overthinking** — Warns after 2 expansions, blocks at 4 until you decide
+- **Session Persistence** — Auto-saved as JSON, resume anytime with `pdtk brainstorm load <id>`
+- **Structured Reports** — Full session reports with action items, decisions, and next-focus
+
+**Prerequisites:** [Ollama](https://ollama.com) installed and running (`ollama serve`)
+
 ### v1.0 (Upcoming)
 
 | Command | Description |
@@ -92,7 +127,6 @@ Use this to send your active editor context to PDTK on command (respects ignore 
 | `pdtk linkedin post` | Post shared content to LinkedIn |
 | `pdtk push` | Push code to GitHub |
 | `pdtk deploy` | Deploy to configured platform |
-| `pdtk brainstorm` | Get a structured second opinion on an idea |
 
 ---
 
@@ -101,15 +135,22 @@ Use this to send your active editor context to PDTK on command (respects ignore 
 ```
 pdtk/
 ├── bin/
-│   └── pdtk.js          # CLI entry point
+│   └── pdtk.js              # CLI entry point & command router
 ├── core/
-│   ├── config.js        # Configuration management
-│   ├── identity.js      # GitHub identity detection
-│   ├── github-api.js    # GitHub API interactions (NEW)
-│   └── linkedin.js      # LinkedIn OAuth & API (NEW)
+│   ├── config.js            # Configuration management
+│   ├── identity.js          # GitHub identity detection
+│   ├── github-api.js        # GitHub API interactions
+│   ├── linkedin.js          # LinkedIn OAuth & API
+│   ├── brainstorm.js        # Brainstorm REPL, renderers & commands
+│   ├── brainstorm-ai.js     # Ollama AI integration & structured prompts
+│   └── brainstorm-session.js# Session persistence & report generation
 ├── config/
-│   └── pdtk.config.json # Local config (gitignored)
+│   ├── pdtk.config.json     # Local config (gitignored)
+│   └── brainstorm-sessions/ # Saved brainstorm sessions (gitignored)
+├── pdtk-linkedin-extension/ # Chrome extension for LinkedIn sync
+├── vscode-pdtk-link/        # VS Code extension for editor snapshots
 ├── package.json
+├── COMMANDS.md              # Full command reference
 ├── CHANGELOG.md
 └── README.md
 ```
@@ -136,7 +177,9 @@ User Command → CLI Parser → Action Router → Whitelisted Executor → Outpu
 | Version | Focus | Status |
 |---------|-------|--------|
 | v0.1.0 | Initial setup + GitHub identity verification | ✅ Complete |
-| v1.0.0 | Push, Deploy, Brainstorm commands | 🔜 In Progress |
+| v0.1.1 | GitHub API, LinkedIn OAuth, Chrome Extension | ✅ Complete |
+| v0.2.0 | Brainstorm Terminal (Ollama-powered) | ✅ Complete |
+| v1.0.0 | Push, Deploy, LinkedIn Post | 🔜 In Progress |
 
 ---
 
@@ -144,8 +187,9 @@ User Command → CLI Parser → Action Router → Whitelisted Executor → Outpu
 
 - **Runtime**: Node.js (LTS)
 - **Execution**: OS shell via Node.js child_process
+- **AI Engine**: Ollama (local LLM, no cloud dependency)
 - **Dependencies**: None (uses only Node.js built-ins)
-- **External CLIs**: `git`, deployment CLI (e.g., `vercel`)
+- **External CLIs**: `git`, `ollama`, deployment CLI (e.g., `vercel`)
 
 ---
 
