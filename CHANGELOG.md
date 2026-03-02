@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2026-03-02
+
+### Added
+- **Mistral Integration** — Mistral (via Ollama) set as the default and active brainstorm model, replacing the `llama3` placeholder
+- **Dedicated Brainstorm Window** — `pdtk brainstorm` now spawns a separate titled CMD window (`PDTK — Brainstorm`) on Windows via `start`; management commands (`setup`, `list`, `export`, `import`) continue to run in the existing terminal. Uses `--internal` flag to distinguish window sessions.
+- **Natural Language Understanding** — The brainstorm REPL now accepts plain English in addition to slash commands via a 3-tier input pipeline:
+  1. Slash command (`/brainstorm topic`) — direct dispatch
+  2. NL intent detection — maps phrases like `"brainstorm X"`, `"tell me more about Y"`, `"go with option 1"`, `"compare them"` to the correct slash command (echoed in dim for transparency)
+  3. Free-form AI chat fallback — anything unrecognised is sent directly to Mistral for a natural conversational response
+- **Free-form Chat** — New `chat` command type and `handleChat()` / `renderChat()` handlers; unknown slash commands (e.g. `/hello`) also route here instead of erroring
+- **Redesigned Welcome Banner** — Box-drawn UI header on session start showing session ID, status, active model, and quick command reference
+- **`callOllamaRaw()`** — Separate Ollama caller without `format:'json'` used exclusively for chat so the model responds naturally in plain text
+
+### Fixed
+- Duplicate `brainstorm` key in `pdtk.config.json` (old `llama3` entry from v0.2.0 setup flow left alongside the new `mistral` entry) — removed stale duplicate
+- Chat responses were repetitive and generic because `buildContext()` was injecting full brainstorm JSON blobs into chat messages — chat now passes only a brief session summary (topic + chosen path) as context
+- Unknown slash commands previously threw a red error; they now fall through to AI chat
+- `/clear` command now correctly passes the `model` argument to `renderWelcome()`
+
+### Changed
+- `core/brainstorm-ai.js` — Refactored `callOllama` to delegate HTTP logic to shared `_ollamaRequest()`; added `callOllamaRaw()` for plain-text calls; `chat()` system prompt tightened (no JSON schema, no filler instruction)
+- `core/brainstorm.js` — `startRepl()` input handler upgraded from single-path to 3-tier dispatch; `renderWelcome()` now accepts and displays `model` name
+- `bin/pdtk.js` — `brainstorm` case block replaced with window-spawning logic; `spawnBrainstormWindow()` helper added
+- Default model fallback in `callOllama()` updated from `llama3` → `mistral`
+
+---
+
 ## [0.2.0] - 2026-02-27
 
 ### Added
@@ -93,5 +120,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pdtk push` — Push code to GitHub
 - `pdtk deploy` — Deploy to configured platform
 - `pdtk linkedin post` — Post content to LinkedIn
-- Dedicated brainstorm terminal window (separate from main PDTK terminal)
 - GitHub repo count in verify command

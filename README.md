@@ -93,32 +93,55 @@ Use this to send your active editor context to PDTK on command (respects ignore 
 
 ### 🧠 Brainstorm Terminal
 
-A structured, AI-assisted ideation environment powered by **Ollama** (local LLM). Acts as a thinking partner, not a chatbot.
+A structured, AI-assisted ideation environment powered by **Mistral via Ollama** (fully local, no cloud). Acts as a thinking partner, not a chatbot. Opens in its own dedicated terminal window on Windows.
 
 ```bash
-# First-time setup
-pdtk brainstorm setup     # Configure your Ollama model
+# Start brainstorming — opens a dedicated CMD window on Windows
+pdtk brainstorm
 
-# Start brainstorming
-pdtk brainstorm            # Opens interactive terminal
+# Resume a previous session
+pdtk brainstorm load <SESSION_ID>
+
+# Session management (runs in current terminal)
+pdtk brainstorm list
+pdtk brainstorm setup
+pdtk brainstorm export <id>
+pdtk brainstorm import <file>
 ```
 
-**Inside the brainstorm terminal:**
+**Inside the brainstorm terminal — slash commands:**
 ```
-pdtk > /brainstorm Real-time duel system    # AI generates structured analysis
+pdtk > /brainstorm Real-time duel system    # Structured AI analysis (2 options)
 pdtk > /option 2                             # Explore the alternative path
 pdtk > /expand architecture                  # Deep-dive a section
 pdtk > /compare                              # Side-by-side option analysis
-pdtk > /report                               # Generate session report
+pdtk > /refine the hybrid approach           # Sharpen a specific idea
+pdtk > /report                               # Generate & save session report
+pdtk > /exit                                 # Exit and save session
 ```
 
+**Natural language is also fully supported:**
+```
+pdtk > brainstorm WebSocket architecture     # Same as /brainstorm
+pdtk > tell me more about the risks          # Same as /expand risks
+pdtk > go with option 1                      # Same as /option 1
+pdtk > compare them                          # Same as /compare
+pdtk > what do you think about Redis?        # Free-form AI chat via Mistral
+pdtk > hello                                 # Conversational — Mistral responds
+```
+
+The terminal uses a **3-tier input pipeline**: slash command → NL intent detection → free-form Mistral chat. Mapped intents are echoed in dim so you always see what was triggered.
+
 **Key features:**
+- **Mistral powered** — Runs locally via Ollama, zero cloud dependency, zero latency overhead
+- **Dedicated window** — Launches in its own titled CMD window, separate from your main terminal
+- **Natural language input** — Understands plain English as well as slash commands
 - **Second Option Logic** — Every brainstorm generates two distinct paths to prevent tunnel vision
 - **Anti-Overthinking** — Warns after 2 expansions, blocks at 4 until you decide
 - **Session Persistence** — Auto-saved as JSON, resume anytime with `pdtk brainstorm load <id>`
 - **Structured Reports** — Full session reports with action items, decisions, and next-focus
 
-**Prerequisites:** [Ollama](https://ollama.com) installed and running (`ollama serve`)
+**Prerequisites:** [Ollama](https://ollama.com) installed and running (`ollama serve`), Mistral pulled (`ollama pull mistral`)
 
 ### v1.0 (Upcoming)
 
@@ -179,6 +202,7 @@ User Command → CLI Parser → Action Router → Whitelisted Executor → Outpu
 | v0.1.0 | Initial setup + GitHub identity verification | ✅ Complete |
 | v0.1.1 | GitHub API, LinkedIn OAuth, Chrome Extension | ✅ Complete |
 | v0.2.0 | Brainstorm Terminal (Ollama-powered) | ✅ Complete |
+| v0.2.1 | Mistral integration, dedicated window, NL understanding, AI chat | ✅ Complete |
 | v1.0.0 | Push, Deploy, LinkedIn Post | 🔜 In Progress |
 
 ---
