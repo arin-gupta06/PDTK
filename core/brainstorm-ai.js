@@ -93,6 +93,11 @@ Respond ONLY in this exact JSON format:
   "verdict": "Clear recommendation with justification (2-3 sentences)"
 }`,
 
+    chat: `You are PDTK Brainstorm Engine — a sharp, developer-focused assistant.
+Answer the user's message clearly and directly. No filler, no repetition.
+Keep responses concise. If the topic deserves deep structured analysis, say so.
+Do NOT repeat the user's question back. Just answer it.`,
+
     option_expand: `You are PDTK Brainstorm Engine. The user has chosen to explore a specific option in depth. Provide a complete implementation breakdown.
 
 Respond ONLY in this exact JSON format:
@@ -118,19 +123,31 @@ const OLLAMA_HOST = 'localhost';
 const OLLAMA_PORT = 11434;
 
 /**
- * Make a structured call to the Ollama Chat API.
- * @param {Array} messages - Chat messages array [{role, content}]
- * @param {string} _unused - Kept for interface compat (no key needed for Ollama)
- * @param {string} model   - Ollama model name (e.g. 'llama3', 'mistral')
- * @returns {Promise<object>} Parsed JSON response from the model
+ * Structured JSON call to Ollama — used for brainstorm/expand/refine/compare.
  */
 function callOllama(messages, _unused, model) {
     return new Promise((resolve, reject) => {
         const body = JSON.stringify({
-            model: model || 'llama3',
+            model: model || 'mistral',
             messages,
             stream: false,
             format: 'json'
+        });
+
+        _ollamaRequest(body, resolve, reject);
+    });
+}
+
+/**
+ * Plain-text call to Ollama — used for free-form chat.
+ * Does NOT use format:'json' so the model responds naturally.
+ */
+function callOllamaRaw(messages, _unused, model) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify({
+            model: model || 'mistral',
+            messages,
+            stream: false
         });
 
         const options = {
@@ -151,21 +168,9 @@ function callOllama(messages, _unused, model) {
                 try {
                     const json = JSON.parse(data);
                     if (res.statusCode >= 200 && res.statusCode < 300) {
-                        const content = json.message?.content || '';
-                        try {
-                            resolve(JSON.parse(content));
-                        } catch {
-                            // Attempt to extract JSON from response if it contains extra text
-                            const jsonMatch = content.match(/\{[\s\S]*\}/);
-                            if (jsonMatch) {
-                                resolve(JSON.parse(jsonMatch[0]));
-                            } else {
-                                reject(new Error('AI returned an invalid JSON structure. Try a different model or rephrase.'));
-                            }
-                        }
+                        resolve(json.message?.content?.trim() || '');
                     } else {
-                        const errMsg = json.error || `Ollama API Error: ${res.statusCode}`;
-                        reject(new Error(errMsg));
+                        reject(new Error(json.error || `Ollama API Error: ${res.statusCode}`));
                     }
                 } catch (e) {
                     reject(new Error(`Failed to parse Ollama response: ${e.message}`));
@@ -182,11 +187,69 @@ function callOllama(messages, _unused, model) {
         });
         req.setTimeout(120000, () => {
             req.destroy();
-            reject(new Error('Request timed out (120s). Model may be too large or still loading.'));
+            reject(new Error('Request timed out (120s).'));
         });
         req.write(body);
         req.end();
     });
+}
+
+/**
+ * Shared HTTP request handler for structured (JSON) Ollama calls.
+ */
+function _ollamaRequest(body, resolve, reject) {
+    const options = {
+        hostname: OLLAMA_HOST,
+        port: OLLAMA_PORT,
+        path: '/api/chat',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body)
+        }
+    };
+
+    const req = http.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+            try {
+                const json = JSON.parse(data);
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    const content = json.message?.content || '';
+                    try {
+                        resolve(JSON.parse(content));
+                    } catch {
+                        const jsonMatch = content.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            resolve(JSON.parse(jsonMatch[0]));
+                        } else {
+                            reject(new Error('AI returned an invalid JSON structure. Try a different model or rephrase.'));
+                        }
+                    }
+                } else {
+                    const errMsg = json.error || `Ollama API Error: ${res.statusCode}`;
+                    reject(new Error(errMsg));
+                }
+            } catch (e) {
+                reject(new Error(`Failed to parse Ollama response: ${e.message}`));
+            }
+        });
+    });
+
+    req.on('error', (e) => {
+        if (e.code === 'ECONNREFUSED') {
+            reject(new Error('Ollama is not running. Start it with: ollama serve'));
+        } else {
+            reject(new Error(`Network error: ${e.message}`));
+        }
+    });
+    req.setTimeout(120000, () => {
+        req.destroy();
+        reject(new Error('Request timed out (120s). Model may be too large or still loading.'));
+    });
+    req.write(body);
+    req.end();
 }
 
 // ─── Context Builder ─────────────────────────────────────────────
@@ -275,6 +338,30 @@ async function expandOption(optionNum, session, apiKey, model) {
 }
 
 /**
+ * Free-form chat — handles any natural language message.
+ * Uses plain-text (no JSON format) so the model responds naturally.
+ * Only passes a brief topic summary as context, not full brainstorm blobs.
+ */
+async function chat(message, session, apiKey, model) {
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPTS.chat }
+    ];
+
+    // Add brief session context if a topic exists — no JSON blobs
+    if (session && session.topic) {
+        messages.push({
+            role: 'system',
+            content: `Current brainstorm topic: "${session.topic}". ` +
+                     `Chosen path: ${session.chosen_path || 'none yet'}.`
+        });
+    }
+
+    messages.push({ role: 'user', content: message });
+
+    return await callOllamaRaw(messages, apiKey, model);
+}
+
+/**
  * Verify Ollama is running and the model is available.
  * @param {string} model - Model name to check
  * @returns {Promise<boolean>}
@@ -334,5 +421,6 @@ module.exports = {
     refine,
     compare,
     expandOption,
+    chat,
     verifyOllama
 };

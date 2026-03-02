@@ -421,15 +421,36 @@ function renderHelp() {
 `);
 }
 
-function renderWelcome(session) {
-    console.log(`
-  ${c.cyan}${c.bright}🧠 PDTK Brainstorm Terminal${c.reset} v1.0
-  ${c.cyan}${'━'.repeat(W)}${c.reset}
-  ${c.bright}Session:${c.reset} ${session.session_id}${session.topic ? `  │  Topic: ${session.topic}` : ''}
-  ${session.interactions.length > 0 ? `${c.dim}Resumed with ${session.interactions.length} prior interactions.${c.reset}` : `${c.dim}New session. Start with /brainstorm <your topic>${c.reset}`}
+function renderWelcome(session, model) {
+    const mdl = model || 'mistral';
+    const isResumed = session.interactions.length > 0;
+    const B = 62; // total box width including ║ chars
+    const INNER = B - 2; // 60 chars between ║ borders
 
-  ${c.dim}Commands: /help  │  Exit: /exit or Ctrl+C${c.reset}
-`);
+    // Plain-text row inside the box (no ANSI in content — pads safely)
+    function row(text) {
+        const spaces = INNER - text.length;
+        return `  ${c.cyan}║${c.reset} ${text}${' '.repeat(Math.max(0, spaces))} ${c.cyan}║${c.reset}`;
+    }
+
+    const title = ` PDTK  BRAINSTORM TERMINAL  v1.0 `;
+    const titlePad = Math.floor((INNER - title.length) / 2);
+    const sub = `Powered by ${mdl} via Ollama  •  localhost:11434`;
+    const subPad = Math.floor((INNER - sub.length) / 2);
+
+    console.log();
+    console.log(`  ${c.cyan}\u2554${'\u2550'.repeat(INNER + 2)}\u2557${c.reset}`);
+    console.log(`  ${c.cyan}\u2551${c.reset}${' '.repeat(titlePad)}${c.bright}${c.cyan}\u{1F9E0}${title}${c.reset}${' '.repeat(INNER - title.length - titlePad + 1)} ${c.cyan}\u2551${c.reset}`);
+    console.log(`  ${c.cyan}\u2551${c.reset}${' '.repeat(subPad)}${c.dim}${sub}${c.reset}${' '.repeat(INNER - sub.length - subPad + 1)} ${c.cyan}\u2551${c.reset}`);
+    console.log(`  ${c.cyan}\u255f${'\u2500'.repeat(INNER + 2)}\u2562${c.reset}`);
+    console.log(row(`  Session : ${session.session_id}`));
+    console.log(row(`  Status  : ${isResumed ? `Resumed  (${session.interactions.length} prior interactions)` : 'New Session — ready to ideate'}`))
+    console.log(row(`  Model   : ${mdl}  (Ollama local)  `));
+    if (session.topic) console.log(row(`  Topic   : ${session.topic}`));
+    console.log(`  ${c.cyan}\u255f${'\u2500'.repeat(INNER + 2)}\u2562${c.reset}`);
+    console.log(`  ${c.cyan}\u2551${c.reset}  ${c.yellow}/brainstorm <topic>${c.reset}  New ideation    ${c.yellow}/help${c.reset}  All commands    ${c.yellow}/exit${c.reset}  ${c.cyan}\u2551${c.reset}`);
+    console.log(`  ${c.cyan}\u255a${'\u2550'.repeat(INNER + 2)}\u255d${c.reset}`);
+    console.log();
 }
 
 // ─── Anti-Overthinking ───────────────────────────────────────────
@@ -485,6 +506,77 @@ function parseCommand(input) {
     };
 }
 
+// ─── Natural Language Intent Parser ─────────────────────────────
+
+/**
+ * Map a plain-language sentence to a slash command if intent is clear.
+ * Returns { cmd, args } like parseCommand, or null to fall through to AI chat.
+ */
+function parseNaturalLanguage(input) {
+    const lo = input.toLowerCase().trim();
+
+    // Exit
+    if (/^(exit|quit|bye|goodbye|close|done)$/.test(lo))
+        return { cmd: 'exit', args: '' };
+
+    // Help
+    if (/^(help|what can you do|show commands|commands|show help)/.test(lo))
+        return { cmd: 'help', args: '' };
+
+    // Summary
+    if (/^(summary|show summary|session summary|current status|where are we)/.test(lo))
+        return { cmd: 'summary', args: '' };
+
+    // Clear
+    if (/^(clear|clear screen|cls|clean screen)$/.test(lo))
+        return { cmd: 'clear', args: '' };
+
+    // Report
+    if (/^(report|generate report|save report|wrap up|wrap this up)/.test(lo))
+        return { cmd: 'report', args: '' };
+
+    // Pivot
+    if (/^(pivot|switch option|change option|switch path|switch to the other)/.test(lo))
+        return { cmd: 'pivot', args: '' };
+
+    // Option choose — "option 1", "go with 2", "choose option 1", "pick 2"
+    if (/\boption\s*1\b|\bgo with (option\s*)?1\b|\bchoose (option\s*)?1\b|\bpick (option\s*)?1\b/.test(lo))
+        return { cmd: 'option', args: '1' };
+    if (/\boption\s*2\b|\bgo with (option\s*)?2\b|\bchoose (option\s*)?2\b|\bpick (option\s*)?2\b/.test(lo))
+        return { cmd: 'option', args: '2' };
+
+    // Compare with two explicit subjects
+    const cmpMatch = lo.match(/(?:compare|which is better[,:]?)\s+(.+?)\s+(?:vs\.?|versus|or|against)\s+(.+)/);
+    if (cmpMatch) return { cmd: 'compare', args: `${cmpMatch[1].trim()} vs ${cmpMatch[2].trim()}` };
+
+    // Compare current options
+    if (/^(compare|which is better|compare (the |both )?options|which option|compare them)/.test(lo))
+        return { cmd: 'compare', args: '' };
+
+    // Expand
+    const expMatch = lo.match(/^(?:expand|tell me more about|deep.?dive(?: into)?|elaborate(?: on)?|go deeper(?: on| into)?|more detail(?: on)?)\s+(.+)/);
+    if (expMatch) {
+        const argStart = input.toLowerCase().indexOf(expMatch[2]);
+        return { cmd: 'expand', args: input.slice(argStart) };
+    }
+
+    // Refine
+    const refMatch = lo.match(/^(?:refine|improve|sharpen|enhance|clean up|tighten)\s+(.+)/);
+    if (refMatch) {
+        const argStart = input.toLowerCase().indexOf(refMatch[1]);
+        return { cmd: 'refine', args: input.slice(argStart) };
+    }
+
+    // Brainstorm
+    const bsMatch = lo.match(/^(?:brainstorm|think about|ideate(?: on)?|explore|analyze|help me with|let'?s brainstorm|i want to brainstorm|i need ideas(?: for| about)?|ideas for)\s+(.+)/);
+    if (bsMatch) {
+        const argStart = input.toLowerCase().indexOf(bsMatch[1]);
+        return { cmd: 'brainstorm', args: input.slice(argStart) };
+    }
+
+    return null; // No clear intent — fall through to free-form AI chat
+}
+
 // ─── REPL ────────────────────────────────────────────────────────
 
 /**
@@ -497,18 +589,26 @@ function startRepl(currentSession, apiKey, model) {
         prompt: `${c.cyan}pdtk >${c.reset} `
     });
 
-    renderWelcome(currentSession);
+    renderWelcome(currentSession, model);
     rl.prompt();
 
     rl.on('line', async (line) => {
         const input = line.trim();
         if (!input) { rl.prompt(); return; }
 
-        const parsed = parseCommand(input);
+        // Try slash command first, then natural language intent, then free-form AI chat
+        let parsed = parseCommand(input);
+        let isChatFallback = false;
+
         if (!parsed) {
-            console.log(`  ${c.dim}Commands start with /. Type /help for available commands.${c.reset}\n`);
-            rl.prompt();
-            return;
+            parsed = parseNaturalLanguage(input);
+            if (!parsed) {
+                // No recognized intent — send directly to AI as chat
+                parsed = { cmd: 'chat', args: input };
+                isChatFallback = true;
+            } else {
+                console.log(`  ${c.dim}→ /${parsed.cmd}${parsed.args ? ' ' + parsed.args : ''}${c.reset}\n`);
+            }
         }
 
         // Pause input during async work
@@ -596,7 +696,11 @@ async function dispatchCommand(cmd, args, session, apiKey, model, rl) {
 
         case 'clear':
             console.clear();
-            renderWelcome(session);
+            renderWelcome(session, model);
+            break;
+
+        case 'chat':
+            await handleChat(args, session, apiKey, model);
             break;
 
         case 'help':
@@ -610,8 +714,8 @@ async function dispatchCommand(cmd, args, session, apiKey, model, rl) {
             break;
 
         default:
-            console.log(`  ${c.red}Unknown command: /${cmd}${c.reset}`);
-            console.log(`  ${c.dim}Type /help for available commands.${c.reset}\n`);
+            // Unknown slash command — treat the full input as a chat message
+            await handleChat(cmd + (args ? ' ' + args : ''), session, apiKey, model);
     }
 }
 
@@ -755,6 +859,35 @@ async function handleOption(args, session, apiKey, model) {
         spinner.stop(`  ${c.red}✗ Failed.${c.reset}`);
         throw err;
     }
+}
+
+async function handleChat(message, session, apiKey, model) {
+    if (!message) return;
+
+    const spinner = createSpinner('Thinking...');
+    try {
+        const result = await ai.chat(message, session, apiKey, model);
+        spinner.stop();
+        renderChat(result);
+    } catch (err) {
+        spinner.stop(`  ${c.red}✗ Failed.${c.reset}`);
+        throw err;
+    }
+}
+
+function renderChat(data) {
+    const text = typeof data === 'string' ? data : (data.response || 'No response.');
+    console.log();
+    console.log(THIN);
+    console.log(`  ${c.bright}${c.cyan}PDTK${c.reset}`);
+    console.log(THIN);
+    console.log(`  ${wrapText(text, W - 4)}`);
+    // Optional brainstorm hint if model suggests it
+    const hintMatch = text.match(/\/brainstorm\s+\S+/);
+    if (hintMatch) {
+        console.log(`\n  ${c.dim}Tip: try → ${hintMatch[0]}${c.reset}`);
+    }
+    console.log();
 }
 
 function handlePivot(session) {

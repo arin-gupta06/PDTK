@@ -438,6 +438,27 @@ async function captureLinkedIn() {
 }
 
 /**
+ * Spawn a dedicated brainstorm window (Windows)
+ * Falls back to in-place if spawning fails or on non-Windows.
+ */
+function spawnBrainstormWindow(sessionId) {
+  const { exec } = require('child_process');
+  const script = path.resolve(__filename);
+  const sessionArg = sessionId ? `brainstorm load ${sessionId} --internal` : 'brainstorm --internal';
+  const cmd = `start "PDTK — Brainstorm" cmd /k node "${script}" ${sessionArg}`;
+
+  exec(cmd, (err) => {
+    if (err) {
+      console.error(`  ${colors.red}Could not open brainstorm window: ${err.message}${colors.reset}`);
+      console.log(`  ${colors.dim}Try running: node bin/pdtk.js brainstorm --internal${colors.reset}\n`);
+    }
+  });
+
+  console.log(`\n  ${colors.cyan}${colors.bright}Opening PDTK Brainstorm Terminal...${colors.reset}`);
+  console.log(`  ${colors.dim}A dedicated terminal window is launching. Close it with /exit.${colors.reset}\n`);
+}
+
+/**
  * Main CLI entry point
  */
 async function main() {
@@ -473,14 +494,26 @@ async function main() {
       }
       break;
 
-    case 'brainstorm':
-      if (subCommand === 'setup') await brainstorm.setup();
-      else if (subCommand === 'list') brainstorm.listSessionsCLI();
-      else if (subCommand === 'load') await brainstorm.start(args[2]);
-      else if (subCommand === 'export') brainstorm.exportSessionCLI(args[2]);
-      else if (subCommand === 'import') brainstorm.importSessionCLI(args[2]);
+    case 'brainstorm': {
+      const isInternal = args.includes('--internal');
+      // Management commands always run in current terminal
+      if (subCommand === 'setup')  { await brainstorm.setup(); break; }
+      if (subCommand === 'list')   { brainstorm.listSessionsCLI(); break; }
+      if (subCommand === 'export') { brainstorm.exportSessionCLI(args[2]); break; }
+      if (subCommand === 'import') { brainstorm.importSessionCLI(args[2]); break; }
+
+      // Session commands: open a dedicated window on Windows unless already internal
+      if (!isInternal && process.platform === 'win32') {
+        const sessionId = subCommand === 'load' ? args[2] : null;
+        spawnBrainstormWindow(sessionId);
+        break;
+      }
+
+      // Running inside the dedicated window (--internal flag set)
+      if (subCommand === 'load') await brainstorm.start(args[2]);
       else await brainstorm.start();
       break;
+    }
 
     case 'help':
     case '--help':

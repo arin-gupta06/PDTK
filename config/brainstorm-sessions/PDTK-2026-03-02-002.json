@@ -1,0 +1,16 @@
+{
+  "session_id": "PDTK-2026-03-02-002",
+  "topic": null,
+  "created_at": "2026-03-02T16:17:30.546Z",
+  "updated_at": "2026-03-02T16:17:30.546Z",
+  "status": "active",
+  "interactions": [],
+  "primary_option": null,
+  "secondary_option": null,
+  "chosen_path": null,
+  "expansion_depth": 0,
+  "action_items": [],
+  "pending_questions": [],
+  "technical_notes": [],
+  "next_session_focus": null
+}
